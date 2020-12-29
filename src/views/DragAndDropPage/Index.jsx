@@ -42,6 +42,24 @@ const showList = [
     },
 ];
 
+// 将某元素插入到数组中的某位置
+export function insertBefore(list,from,to){
+    const copy = [...list];
+    const fromIndex = copy.indexOf(from);
+    if(from===to){
+        return copy;
+    }
+    copy.splice(fromIndex,1);
+    const newToIndex = to ? copy.indexOf(to) : -1;
+    if(to && newToIndex >= 0){
+        copy.splice(newToIndex,0,from)
+    }else{
+        // 没有to,或者to不在序列里，将元素移动到末尾
+        copy.push(from)
+    }
+    return copy
+}
+
 const DragAndDropPage = () => {
     const [list,setList] = useState(showList);
 
@@ -57,6 +75,7 @@ const DragAndDropPage = () => {
         return Math.ceil(size / COLUMN) * HEIGHT
     },[list])
 
+    console.log(sortedList)
     return(
         <div
             className={styles.wrapper}
@@ -73,6 +92,7 @@ const DragAndDropPage = () => {
                         const col = index % COLUMN;
                         return(
                             <li
+                                draggable
                                 key={item.id}
                                 className={styles.item}
                                 style={{

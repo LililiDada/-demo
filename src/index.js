@@ -1,18 +1,19 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import App from './App';
-import { HashRouter, Route } from 'react-router-dom'
-import { pages } from './util'
+import { BrowserRouter as Router, Route , Switch } from 'react-router-dom'
+import {pages} from './util'
 ReactDOM.render(
-    <HashRouter>
-      <Route path="/" component={App}>
+    <Router>
+      <Switch>
+        <Route path="/" exact component={App} />
         {
-          pages.length && pages.map(item => {
-            return <Route path={item.path} component={item.component} />
+          pages.map(item => {
+            return <Route path={item.path} exact component={item.component} key={item.path}/>
           })
         }
-      </Route> 
-    </HashRouter>,
+        </Switch>
+    </Router>,
   document.getElementById('root')
 );
 
