@@ -1,4 +1,4 @@
-import React, {useMemo , useState} from 'react';
+import React, {useCallback, useMemo , useRef, useState} from 'react';
 import styles from './index.module.scss';
 //  每行多少列
 const COLUMN = 4;
@@ -60,8 +60,24 @@ export function insertBefore(list,from,to){
     return copy
 }
 
+// 判断数组是否相等
+export function isEqualBy(a,b,key) {
+    const aList = a.map((item => item[key]));
+    const bList = b.map((item => item[key]));
+
+    let flag = true;
+    aList.forEach((i,idx) => {
+        if(i !== bList[idx] ){
+            flag = false
+        }
+    })
+    return flag;
+}
+
 const DragAndDropPage = () => {
     const [list,setList] = useState(showList);
+    const drapItemRef = useRef();
+    const dropAreaRef = useRef(null);
 
     // IMPORTANT:动画需要，保持一定的渲染顺序
     const sortedList = useMemo(() => {
@@ -75,11 +91,63 @@ const DragAndDropPage = () => {
         return Math.ceil(size / COLUMN) * HEIGHT
     },[list])
 
-    console.log(sortedList)
+    const handleDragStart = (e,data) => {
+        drapItemRef.current = data;
+        const el = dropAreaRef.current?.querySelector(`[data-id="${data.id}"]`)
+        if(el){
+            el.classList.add(styles.draggingItem);
+        }
+    }
+
+    const handleDragEnd = useCallback(()=>{
+        const data = drapItemRef.current;
+        if(data){
+            const el = dropAreaRef.current?.querySelector(`[data-id="${data.id}"]`);
+            if(el){
+                el.classList.remove(styles.draggingItem);
+            }
+            drapItemRef.current = undefined;
+        }
+    },[])
+
+    const updateList = (clientX,clientY) => {
+        const dropRect = dropAreaRef.current?.getBoundingClientRect();
+        if(dropRect){
+            const offsetX = clientX - dropRect.left;
+            const offsetY = clientY - dropRect.top;
+            const dragItem = drapItemRef.current;
+            // 超出拖动区域
+            if(!dragItem || offsetX < 0 || offsetX>dropRect.width || offsetY < 0 || offsetY > dropRect.height){
+                return;
+            }
+            const col = Math.floor(offsetX / WIDTH);
+            const row = Math.floor(offsetY/HEIGHT);
+            let currentIndex = row * COLUMN * col;
+            const fromIndex = list.indexOf(dragItem);
+            if(fromIndex < currentIndex){
+                //从前往后移
+                currentIndex++;
+            }
+            const currentItem = list[currentIndex];
+            const ordered = insertBefore(list,dragItem,currentItem);
+            if(isEqualBy(ordered,list,'id')){
+                return;
+            }
+            setList(ordered)
+        }
+    }
+
+    const handleDragOver = useCallback((e)=>{
+        e.preventDefault();
+        updateList(e.clientX,e.clientY);
+    },[updateList])
     return(
         <div
             className={styles.wrapper}
+            ref={dropAreaRef}
             style={{width:COLUMN * (WIDTH + IMAGE_PADDING) + IMAGE_PADDING}}
+            onDragEnd={handleDragEnd}
+            onDragOver={handleDragOver}
         >
             <ul
                 className={styles.list}
@@ -102,6 +170,7 @@ const DragAndDropPage = () => {
                                     padding: `0${IMAGE_PADDING}px`
                                 }}
                                 data-id = {item.id}
+                                onDragStart={(e) => handleDragStart(e, item)}
                             >
                                 <img src={item.image} alt={item.name} width={WIDTH} />
                             </li>
