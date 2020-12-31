@@ -50,6 +50,7 @@ export function insertBefore(list,from,to){
         return copy;
     }
     copy.splice(fromIndex,1);
+    // 获取要插入的位置
     const newToIndex = to ? copy.indexOf(to) : -1;
     if(to && newToIndex >= 0){
         copy.splice(newToIndex,0,from)
@@ -110,33 +111,41 @@ const DragAndDropPage = () => {
         }
     },[])
 
-    const updateList = (clientX,clientY) => {
-        const dropRect = dropAreaRef.current?.getBoundingClientRect();
-        if(dropRect){
-            const offsetX = clientX - dropRect.left;
-            const offsetY = clientY - dropRect.top;
-            const dragItem = drapItemRef.current;
-            // 超出拖动区域
-            if(!dragItem || offsetX < 0 || offsetX>dropRect.width || offsetY < 0 || offsetY > dropRect.height){
-                return;
+    const updateList = useCallback(
+        (clientX,clientY) => {
+            const dropRect = dropAreaRef.current?.getBoundingClientRect();
+            if(dropRect){
+                const offsetX = clientX - dropRect.left;
+                const offsetY = clientY - dropRect.top;
+                const dragItem = drapItemRef.current;
+                // 超出拖动区域
+                if(!dragItem || offsetX < 0 || offsetX>dropRect.width || offsetY < 0 || offsetY > dropRect.height){
+                    return;
+                }
+                const col = Math.floor(offsetX / WIDTH);
+                const row = Math.floor(offsetY / HEIGHT);
+                // 第二行第三个（一行四个）：1(row)*4+3(col) 
+                let currentIndex = row * COLUMN + col;
+                const fromIndex = list.indexOf(dragItem);
+                /**
+                 * 重点
+                 * Math.floor是抛弃小数点，取整，所以col如果向前移动只有移动到想要移动位置的前面才会成功
+                 * 故currentIndex向前移动时需要+1
+                 */
+                if(fromIndex < currentIndex){
+                    //从前往后移
+                    currentIndex++;
+                }
+                const currentItem = list[currentIndex];
+                const ordered = insertBefore(list,dragItem,currentItem);
+                if(isEqualBy(ordered,list,'id')){
+                    return;
+                }
+                setList(ordered)
             }
-            const col = Math.floor(offsetX / WIDTH);
-            const row = Math.floor(offsetY/HEIGHT);
-            let currentIndex = row * COLUMN * col;
-            const fromIndex = list.indexOf(dragItem);
-            if(fromIndex < currentIndex){
-                //从前往后移
-                currentIndex++;
-            }
-            const currentItem = list[currentIndex];
-            const ordered = insertBefore(list,dragItem,currentItem);
-            if(isEqualBy(ordered,list,'id')){
-                return;
-            }
-            setList(ordered)
-        }
-    }
-
+        },[list]
+    )
+    // onDragOver 当用户拖拽对象划过合法拖拽目标时持续在目标元素上触发
     const handleDragOver = useCallback((e)=>{
         e.preventDefault();
         updateList(e.clientX,e.clientY);
